@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using FriendList.Models;
+using FriendList.Areas.Identity.Data;
 
 namespace FriendList.Controllers;
 
@@ -15,6 +16,13 @@ public class HomeController : Controller
 
     public IActionResult Index()
     {
+
+        var User = HttpContext?.User;
+        if(User!.Identity!.IsAuthenticated && User.IsInRole("admin")) {
+            return RedirectToAction("Index", "Admin");
+        }else if (User!.Identity!.IsAuthenticated && User.IsInRole("user")) {
+            return RedirectToAction("Index", "FriendList");
+        }
         return View();
     }
 

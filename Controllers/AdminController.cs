@@ -24,8 +24,21 @@ namespace FriendList.Controllers
         // GET: Admin
         public async Task<IActionResult> Index()
         {
+            var users = await _context.Users.ToListAsync();
+            var userView = new List<UserViewModel>();
+
+            users.ForEach( user => {
+                UserViewModel userViewModel = new UserViewModel() {
+                    Email = user.Email,
+                    EmailConfirmed = user.EmailConfirmed,
+                    Id = user.Id,
+                    PhoneNumber = user.PhoneNumber,
+                    PhoneNumberConfirmed = user.PhoneNumberConfirmed
+                };
+                userView.Add(userViewModel);
+            });
               return _context.Users != null ? 
-                          View(await _context.Users.ToListAsync()) :
+                          View(userView) :
                           Problem("Entity set 'FriendListIdentityDbContext.Users'  is null.");
         }
 

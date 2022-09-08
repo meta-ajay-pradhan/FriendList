@@ -15,18 +15,25 @@ namespace FriendList.Controllers
     public class FriendListController : Controller
     {
         private readonly FriendListContext _context;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public FriendListController(FriendListContext context)
+        public FriendListController(FriendListContext context, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
+            _httpContextAccessor = httpContextAccessor;
+        }
+
+        private string? getOwnerId() {
+            return _httpContextAccessor?.HttpContext?.User?.Identity?.Name;
         }
 
         // GET: FriendList
         public async Task<IActionResult> Index()
         {
-              return _context.Friend != null ? 
-                          View(await _context.Friend.ToListAsync()) :
-                          Problem("Entity set 'FriendListContext.Friend'  is null.");
+            var ownerId = getOwnerId();
+            return _context.Friend != null ?
+                        View(await _context.Friend.Where(frnd => frnd.OwnerId == ownerId).ToListAsync()) :
+                        Problem("Entity set 'FriendListContext.Friend'  is null.");
         }
 
         // GET: FriendList/Details/5
@@ -62,6 +69,7 @@ namespace FriendList.Controllers
         {
             if (ModelState.IsValid)
             {
+                friend.OwnerId = getOwnerId();
                 _context.Add(friend);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
@@ -81,7 +89,10 @@ namespace FriendList.Controllers
             if (friend == null)
             {
                 return NotFound();
+            }else if (friend.OwnerId != getOwnerId()) {
+                return new RedirectResult("~/Identity/Account/AccessDenied");
             }
+
             return View(friend);
         }
 
@@ -90,7 +101,7 @@ namespace FriendList.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("FriendId,FriendName,Place")] Friend friend)
+        public async Task<IActionResult> Edit(int id, [Bind("FriendId,FriendName,Place,OwnerId")] Friend friend)
         {
             if (id != friend.FriendId)
             {
@@ -101,8 +112,11 @@ namespace FriendList.Controllers
             {
                 try
                 {
-                    _context.Update(friend);
-                    await _context.SaveChangesAsync();
+                    if(_context?.Friend?.Find(friend.FriendId)?.OwnerId != getOwnerId()) {
+                        return new RedirectResult("~/Identity/Account/AccessDenied");
+                    }
+                    _context?.Update(friend);
+                    await _context!.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -152,14 +166,14 @@ namespace FriendList.Controllers
             {
                 _context.Friend.Remove(friend);
             }
-            
+
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool FriendExists(int id)
         {
-          return (_context.Friend?.Any(e => e.FriendId == id)).GetValueOrDefault();
+            return (_context.Friend?.Any(e => e.FriendId == id)).GetValueOrDefault();
         }
     }
 }

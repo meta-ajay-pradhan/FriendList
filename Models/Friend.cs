@@ -12,6 +12,8 @@ public class Friend
     [Required]
     public string? FriendName { get; set; }
 
+    public string? OwnerId { get; set; }
+
     [StringLength(50, MinimumLength = 3)]
     [Required]
     public string? Place { get; set; }
