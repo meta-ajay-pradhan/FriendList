@@ -1,11 +1,27 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
+using FriendList.Areas.Identity.Data;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<FriendListContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("FriendListContext") ?? throw new InvalidOperationException("Connection string 'FriendListContext' not found.")));
 
+builder.Services.AddDbContext<FriendListIdentityDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("FriendListIdentityDbContextConnection") ?? throw new InvalidOperationException("Connection string 'FriendListIdentityDbContextConnection' not found.")));
+
+builder.Services.AddDefaultIdentity<AccountUser>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<FriendListIdentityDbContext>();
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddMvc( obj => {
+    var policy = new AuthorizationPolicyBuilder()
+                        .RequireAuthenticatedUser()
+                        .Build();
+});
 
 var app = builder.Build();
 
@@ -21,11 +37,13 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseAuthentication();;
 
 app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=FriendList}/{action=Index}/{id?}");
+app.MapRazorPages();
 
 app.Run();
